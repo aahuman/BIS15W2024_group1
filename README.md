@@ -6,8 +6,11 @@
 **Group members' information:** 
 - **Clive Smith:** Biological Sciences Major, Undergraduate Student
 - **Iliya Voytsyshyn:** Genetics and Genomic Major, Undergraduate Student
+  
 **Instructor:** [Joel Ledford](mailto:example@example.com)  
+
 **Educational Level/University:** Undergraduate Students at UC Davis
+
 **Class:** BIS 15L
 
 
