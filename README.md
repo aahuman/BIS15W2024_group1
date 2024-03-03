@@ -1,4 +1,14 @@
-# BIS15W2024_group1
+# Helthcare Project
+
+## Group Information
+**Group members:** [Iliya Voytsyshyn](mailto:genvoytsyshyn@ucdavis.edu), [Clive Smith](mailto:example@example.com)
+**Group members' information:** 
+- **Clive Smith:** Biological Sciences Major, Undergraduate Student
+- **Iliya Voytsyshyn:** Genetics and Genomic Major, Undergraduate Student
+**Instructor:** [Joel Ledford](mailto:example@example.com)  
+**Educational Level/University:** Undergraduate Students at UC Davis
+**Class:** BIS 15L
+
 
 ## Introduction:
 This project addresses rising healthcare costs, focusing on cost-effective strategies and optimal care access. We begin by detailing the datasets used and our data cleaning process.
