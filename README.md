@@ -4,7 +4,7 @@
 
 **Group members:**
 - [Iliya Voytsyshyn](mailto:genvoytsyshyn@ucdavis.edu)
-- [Clive Smith](mailto:example@example.com)
+- [Clive Smith](mailto:clismith@ucdavis.edu)
 
 **Group members' information:** 
 - **Clive Smith:** Biological Sciences Major, Undergraduate Student
