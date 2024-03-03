@@ -9,3 +9,34 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(tidyverse)
+library(janitor)
+library(lubridate)
+```
+
+```{r}
+files <-  list.files(path = "data/hospitals", pattern = ".csv", full.names = TRUE)
+```
+
+```{r}
+hospitals_list <- lapply(files, read_csv)
+```
+```{r}
+names <- list.files(path = "data/hospitals", pattern = ".csv")
+names
+```
+
+```{r}
+names_list <- strsplit(names, split = ".csv")
+names_list
+```
+```{r}
+names_vec <- unlist(names_list)
+names_vec
+```
+```{r}
+names(hospitals_list) <- names_vec
+names(hospitals_list)
+```
+
