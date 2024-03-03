@@ -2,6 +2,7 @@
 
 ## Group Information
 **Group members:** [Iliya Voytsyshyn](mailto:genvoytsyshyn@ucdavis.edu), [Clive Smith](mailto:example@example.com)
+
 **Group members' information:** 
 - **Clive Smith:** Biological Sciences Major, Undergraduate Student
 - **Iliya Voytsyshyn:** Genetics and Genomic Major, Undergraduate Student
