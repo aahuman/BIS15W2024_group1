@@ -40,3 +40,8 @@ names(hospitals_list) <- names_vec
 names(hospitals_list)
 ```
 
+```{r}
+hospitals_all <- bind_rows(hospitals_list)
+hospitals_all
+```
+
