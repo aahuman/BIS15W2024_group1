@@ -45,3 +45,38 @@ hospitals_all <- bind_rows(hospitals_list)
 hospitals_all
 ```
 
+```{r}
+names(hospitals_all)
+```
+
+```{r}
+# Columns to exclude
+columns_to_exclude <- c(
+    "Total Discharges Title V",
+    "Total Discharges Title XVIII",
+    "Total Discharges Title XIX",
+    "Total Discharges Title V + Total for all Subproviders",
+    "Total Discharges Title XVIII + Total for all Subproviders",
+    "Total Discharges Title XIX + Total for all Subproviders",
+    "Hospital Total Discharges Title V For Adults & Peds",
+    "Hospital Total Discharges Title XVIII For Adults & Peds",
+    "Hospital Total Discharges Title XIX For Adults & Peds",
+    "Total Days Title V + Total for all Subproviders",
+    "Total Days Title XVIII + Total for all Subproviders",
+    "Total Days Title XIX + Total for all Subproviders",
+    "Hospital Total Days Title V For Adults & Peds",
+    "Hospital Total Days Title XVIII For Adults & Peds",
+    "Hospital Total Days Title XIX For Adults & Peds"
+)
+
+# Check column names of the dataset
+#colnames(hospitals_all)
+
+# Exclude columns
+hospitals_all_clean <- hospitals_all[, !colnames(hospitals_all) %in% columns_to_exclude]
+
+# Show the cleaned dataset
+names(hospitals_all_clean)
+```
+
+
