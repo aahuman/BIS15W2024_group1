@@ -25,4 +25,8 @@ hospitals %>%
 hospitals %>% 
   summarize(n=n_distinct(`Insurance Provider`))
 ```
+```{r}
+hospitals %>% 
+  group_by(Hospital)
+```
 
