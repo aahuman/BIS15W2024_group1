@@ -30,3 +30,77 @@ hospitals %>%
   group_by(Hospital)
 ```
 
+```{r}
+summary(hospitals)
+```
+\\ Part 0
+
+```{r}
+hospitals <- clean_names(hospitals)
+names(hospitals)
+```
+Here we removed the infromation that is not neeeded for the project. 
+```{r}
+hospitals <- hospitals %>%
+  select(-blood_type, -room_number)
+```
+
+Here we took care of the confidentility of people presented in the data. 
+```{r}
+hospitals_final <- hospitals %>%
+  mutate(id = as.integer(factor(name))) %>%
+  select(-doctor, -name) %>%
+  arrange(id)
+```
+
+
+
+\\ Part 1
+
+```{r}
+medicare_cost <- hospitals[ , c("date_of_admission", "billing_amount")]
+```
+
+```{r}
+pre_covid <- subset(medicare_cost, date_of_admission < as.Date("2020-01-01"))
+post_covid <- subset(medicare_cost, date_of_admission >= as.Date("2020-01-01"))
+summary(pre_covid$billing_amount)
+summary(post_covid$billing_amount)
+```
+
+
+```{r}
+combined_data <- bind_rows(pre_covid %>% mutate(period = "Pre-COVID"),
+                           post_covid %>% mutate(period = "Post-COVID"))
+
+# Plot combined data with separate lines of regression for pre and post-COVID data
+combined_data %>%
+  ggplot(aes(x = date_of_admission, y = log10(billing_amount), color = period)) +
+  geom_point(size = 0.5) + 
+  geom_smooth(method = "lm", aes(group = period), se = TRUE) +
+  
+  labs(title = "Medicare Costs Comparison",
+       x = "Date of Admission",
+       y = "Log10(Billing Amount)",
+       color = "Period") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = rel(1.75), hjust = 0.5))
+```
+
+\\ Part 3
+
+```{r}
+hospitals_final %>%
+  count(hospital)%>%
+  filter(n >= 5) %>%
+  arrange(desc(n))
+```
+
+
+
+
+
+
+
+
+
