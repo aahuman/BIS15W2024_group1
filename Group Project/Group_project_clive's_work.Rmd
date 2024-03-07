@@ -110,17 +110,51 @@ hospitals_final %>%
 
 #can use this code to find top 5 hospitals for each condition with slight adjustment
 ```{r}
-hospitals_final %>%
+top_hospitals <- hospitals_final %>%
   mutate(discharge_date = as.Date(discharge_date), 
          date_of_admission = as.Date(date_of_admission),
          time_spent = discharge_date - date_of_admission) %>%
   filter(!is.na(time_spent)) %>% 
   separate(time_spent, into="length_of_stay", sep = " ") %>% 
-  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
-  mutate(hospital_quality=length_of_stay*billing_amount) %>% 
+  mutate(length_of_stay = as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality = log10(length_of_stay * billing_amount)) %>% 
   arrange(hospital_quality) %>% 
-  filter(medical_condition=="Cancer") %>% 
-  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  filter(medical_condition == "Cancer") %>% 
+  select(hospital) %>% 
   head(5)
+top_hospitals
 ```
+
+
+```{r}
+hospital_location <- read_csv("data/hospital_locations.csv")
+```
+```{r}
+#install.packages("stringdist")
+library(stringdist)
+```
+
+
+```{r}
+top_hospitals$hospital <- tolower(trimws(top_hospitals$hospital))
+hospital_location$NAME <- tolower(trimws(hospital_location$NAME))
+
+# Calculate string distances between hospital names
+distances <- stringdist::stringdistmatrix(top_hospitals$hospital, hospital_location$NAME)
+
+# Define a threshold for similarity
+threshold <- 0.3  # Adjust as needed
+
+# Find matches within the threshold
+matches <- which(distances <= threshold, arr.ind = TRUE)
+
+# Extract matched hospital indices
+matched_indices <- unique(matches[, 1])
+
+# Filter hospital_location for matched hospitals
+matched_hospitals <- hospital_location[matched_indices, ]
+
+matched_hospitals
+```
+
 
