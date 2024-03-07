@@ -117,10 +117,90 @@ hospitals_final %>%
   filter(!is.na(time_spent)) %>% 
   separate(time_spent, into="length_of_stay", sep = " ") %>% 
   mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
-  mutate(hospital_quality=length_of_stay*billing_amount) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
   arrange(hospital_quality) %>% 
   filter(medical_condition=="Cancer") %>% 
   select(hospital, hospital_quality, admission_type, medical_condition) %>% 
   head(5)
 ```
+```{r}
+table(hospitals_final$medical_condition)
+```
+
+
+
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Arthritis") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+```
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Asthma") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+```
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Diabetes") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+
+```
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Hypertension") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+```
+
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Obesity") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+```
+
+
 
