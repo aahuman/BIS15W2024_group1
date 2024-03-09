@@ -224,4 +224,44 @@ matches <- hospitals_location_words %>%
 matches
 ```
 
+```{r}
+ui <- dashboardPage(
+  dashboardHeader(title = "Best Hospitals for Care"),
+  dashboardSidebar(disable = TRUE),
+  dashboardBody(
+    fluidRow(
+      box(title = "Table Settings", width = 3,
+          selectInput("medical_condition", "Select Condition", choices = c("Arthritis", "Asthma", "Cancer", "Diabetes", "Hypertension", "Obesity"), 
+                      selected = "Cancer"),
+          selectInput("insurance_provider", "Select Insurance Provider", choices = c("Aetna", "Blue Cross", "Cigna", "Medicare", "UnitedHealthcare"),
+                      selected = "Medicare")
+      ), 
+      box(title = "Best Hospitals", width = 8,
+          dataTableOutput("table")
+      ) 
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  # Assuming 'hospitals_final' is the dataset you want to display
+  # Replace it with the actual dataset if needed
+  hospitals_final <- your_actual_dataset_here
+  
+  output$table <- renderDataTable({
+    data <- hospitals_final
+    
+    # Filter the data based on selected medical_condition
+    data <- data[data$medical_condition == input$medical_condition,]
+    
+    # Filter the data based on selected insurance provider (assuming 'cyl' is intended for that)
+    data <- data[data$insurance_provider == input$insurance_provider,]
+    
+    # Return the filtered data for rendering in the DataTable
+    data
+  })
+}
+
+shinyApp(ui, server)
+```
 
