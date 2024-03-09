@@ -97,6 +97,22 @@ hospitals_final %>%
 ```
 
 
+```{r}
+hospitals_final %>%
+  count(medical_condition)
+```
+
+```{r}
+time <-hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         difference_days = discharge_date - date_of_admission) %>%
+  filter(!is.na(difference_days))
+time
+```
+
+
+
 
 
 
