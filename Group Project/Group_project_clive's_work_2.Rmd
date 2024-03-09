@@ -244,9 +244,10 @@ ui <- dashboardPage(
 )
 
 server <- function(input, output, session) {
-  # Assuming 'hospitals_final' is the dataset you want to display
-  # Replace it with the actual dataset if needed
-  hospitals_final <- your_actual_dataset_here
+  
+  session$onSessionEnded(stopApp)
+  
+  hospitals_final
   
   output$table <- renderDataTable({
     data <- hospitals_final
