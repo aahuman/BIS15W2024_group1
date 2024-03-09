@@ -188,7 +188,7 @@ hospitals_final %>%
 ```
 
 ```{r}
-hospitals_final %>%
+obesity <- hospitals_final %>%
   mutate(discharge_date = as.Date(discharge_date), 
          date_of_admission = as.Date(date_of_admission),
          time_spent = discharge_date - date_of_admission) %>%
@@ -202,5 +202,26 @@ hospitals_final %>%
   head(5)
 ```
 
+```{r}
+hospitals_location <- read_csv("data/hospital_locations.csv")
+```
+
+
+```{r}
+hospitals_location_words <- hospitals_location %>%
+  select(NAME) %>%
+  separate_rows(NAME, sep = " ")
+
+# Extract unique words from the obesity dataset
+obesity_words <- obesity %>%
+  mutate(hospital = tolower(hospital)) %>%
+  distinct(hospital) %>%
+  separate_rows(hospital, sep = " ")
+
+# Filter for matches based on any word from the hospital names
+matches <- hospitals_location_words %>%
+  filter(NAME %in% obesity_words$hospital)
+matches
+```
 
 
