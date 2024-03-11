@@ -94,18 +94,7 @@ mutate(price_level=case_when(billing_amount<13507 ~ "low",
                                   billing_amount>25258 & billing_amount<=37734 ~ "high", 
                                   billing_amount>37734 ~ "very high"))
 ```
-#this graph isn't feasible, there are just too many hospitals. We need to find a way to cut down on the number shown here somehow.
-```{r}
-hospitals_final %>% 
-mutate(price_level=case_when(billing_amount<13507 ~ "low", 
-                                  billing_amount>=13507 & billing_amount<=25258 ~ "normal", 
-                                  billing_amount>25258 & billing_amount<=37734 ~ "high", 
-                                  billing_amount>37734 ~ "very high")) %>% 
-  group_by(hospital) %>% 
-  count(hospital, price_level) %>% 
-  ggplot(aes(x=hospital, y=n, fill=price_level))+
-  geom_col(position="dodge")
-```
+
 #note: we need to find a way to get the locations for these hospitals. Currently, we only have the names of the hospitals, which is quite problematic.
 
 ```{r}
@@ -540,6 +529,12 @@ ggmap(map) +
 library(sf)
 ```
 
+```{r}
+#install.packages("leaflet")
+library(leaflet)
+```
+
+
 
 
 ```{r}
@@ -564,13 +559,13 @@ ui <- dashboardPage(
     fluidRow(
       box(
         title = "Matched Hospitals",
-        width = 6,
+        width = 12,
         dataTableOutput("matched_hospitals_table")
       ),
       box(
         title = "Map of Matched Hospitals",
-        width = 6,
-        plotOutput("map_plot")
+        width = 12,
+        leafletOutput("map_plot")
       )
     )
   )
@@ -590,74 +585,60 @@ server <- function(input, output, session) {
       filter(!is.na(time_spent)) %>% 
       separate(time_spent, into = "length_of_stay", sep = " ") %>% 
       mutate(length_of_stay = as.numeric(length_of_stay)) %>% 
-      mutate(hospital_quality = log10(length_of_stay * billing_amount))
+      mutate(hospital_quality = log10(length_of_stay * billing_amount)) %>%
+      arrange(hospital_quality) %>% 
+      filter(medical_condition == input$medical_condition) %>% 
+      head(5) %>%
+      select(hospital, hospital_quality, admission_type, medical_condition)
   })
   
   output$table <- renderDataTable({
     data <- top5()
-    
-    # Filter the data based on selected medical_condition
-    data <- data[data$medical_condition == input$medical_condition,]
-    
-    # Filter the data based on selected insurance provider
-    data <- data[data$insurance_provider == input$insurance_provider,]
-    
-    # Select top five hospitals based on hospital_quality
-    data <- data %>% 
-      arrange(hospital_quality) %>% 
-      head(5) %>%
-      select(hospital, hospital_quality, admission_type, medical_condition)
-    
-    # Return the filtered data for rendering in the DataTable
     data
   })
   
-# Define the reactive expression to find matches from the other dataset
-matched_hospitals <- reactive({
-  data <- top5()  # Use the same filtering logic as top5 reactive
+  # Define the reactive function to find matches from the other dataset
+  matched_hospitals <- reactive({
+    x <- top5()  # Use the same filtering logic as top5 reactive
+    
+    combined_results <- list()
+    
+    # Loop through each hospital in the filtered dataset
+    for(i in 1:nrow(x)) {
+      row <- x[i,]
+      w <- strsplit(row$hospital, " ")[[1]][1]
+      w <- str_replace_all(w, "[^[:alnum:]]", " ")
+      # Append each subset to the list
+      combined_results[[i]] <- hospitals_location[grep(w, tolower(hospitals_location$name), ignore.case = TRUE), c("name", "zip", "latitude", "longitude")]
+    }
+    
+    # Combine all the subsets into a single dataframe
+    result <- do.call(rbind, combined_results)
+    
+    result
+  })
   
-  combined_results <- list()
+  # Render the matched hospitals datatable
+  output$matched_hospitals_table <- renderDataTable({
+    matched_hospitals()
+  })
   
-  # Loop through each hospital in the filtered dataset
-  for(i in 1:nrow(data)) {
-    row <- data[i,]
-    w <- strsplit(row$hospital, " ")[[1]][1]
-    w <- str_replace_all(w, "[^[:alnum:]]", " ")
-    # Append each subset to the list
-    combined_results[[i]] <- hospitals_location[grep(w, tolower(hospitals_location$name), ignore.case = TRUE), c("name", "zip", "latitude", "longitude")]
-  }
-  
-  # Combine all the subsets into a single dataframe
-  result <- do.call(rbind, combined_results)
-  
-  result
-})
-
-# Render the map of matched hospitals
-output$map_plot <- renderPlot({
-  result <- matched_hospitals()
-  
-  # Get the bounding box for the map
-  lat <- c(summary(result$latitude)["Min."], summary(result$latitude)["Max."])
-  long <- c(summary(result$longitude)["Min."], summary(result$longitude)["Max."])
-  bbox <- make_bbox(long, lat, f = 0.03)
-  
-  # Get the map
-  map <- get_stamenmap(bbox, maptype = "terrain", zoom = 7)
-  
-  # Plot the map
-  ggmap(map) +
-    geom_point(data = result, aes(longitude, latitude), size = 2) +
-    labs(x = "Longitude", 
-         y = "Latitude",
-         title = "Best Hospitals")
-})
-
+  # Render the map of matched hospitals
+  output$map_plot <- renderLeaflet({
+    result <- matched_hospitals()
+    
+    leaflet(result) %>%
+      addTiles() %>%
+      addMarkers(
+        lng = ~longitude,
+        lat = ~latitude,
+        popup = ~name
+      )
+  })
 }
 
 # Run the application
 shinyApp(ui, server)
-
 ```
 
 
