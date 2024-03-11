@@ -87,29 +87,7 @@ combined_data %>%
   theme(plot.title = element_text(size = rel(1.75), hjust = 0.5))
 ```
 
-\\ Part 3
 
-```{r}
-hospitals_final %>%
-  count(hospital)%>%
-  filter(n >= 5) %>%
-  arrange(desc(n))
-```
-
-
-```{r}
-hospitals_final %>%
-  count(medical_condition)
-```
-
-```{r}
-time <-hospitals_final %>%
-  mutate(discharge_date = as.Date(discharge_date), 
-         date_of_admission = as.Date(date_of_admission),
-         difference_days = discharge_date - date_of_admission) %>%
-  filter(!is.na(difference_days))
-time
-```
 
 
 

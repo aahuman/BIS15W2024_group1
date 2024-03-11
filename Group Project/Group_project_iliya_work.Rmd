@@ -432,19 +432,21 @@ server <- function(input, output, session) {
   
   # Define top5 as a reactive expression
   top5 <- reactive({
-    hospitals_final %>%
-      mutate(discharge_date = as.Date(discharge_date), 
-             date_of_admission = as.Date(date_of_admission),
-             time_spent = discharge_date - date_of_admission) %>%
-      filter(!is.na(time_spent)) %>% 
-      separate(time_spent, into = "length_of_stay", sep = " ") %>% 
-      mutate(length_of_stay = as.numeric(length_of_stay)) %>% 
-      mutate(hospital_quality = log10(length_of_stay * billing_amount)) %>%
-      arrange(hospital_quality) %>% 
-      filter(medical_condition == input$medical_condition) %>% 
-      head(5) %>%
-      select(hospital, hospital_quality, admission_type, medical_condition)
-  })
+  hospitals_final %>%
+    mutate(discharge_date = as.Date(discharge_date), 
+           date_of_admission = as.Date(date_of_admission),
+           time_spent = discharge_date - date_of_admission) %>%
+    filter(!is.na(time_spent)) %>% 
+    separate(time_spent, into = "length_of_stay", sep = " ") %>% 
+    mutate(length_of_stay = as.numeric(length_of_stay)) %>% 
+    mutate(hospital_quality = log10(length_of_stay * billing_amount)) %>%
+    arrange(hospital_quality) %>% 
+    filter(medical_condition == input$medical_condition,
+           insurance_provider == input$insurance_provider) %>%
+    head(5) %>%
+    select(hospital, hospital_quality, admission_type, medical_condition)
+})
+
   
   output$table <- renderDataTable({
     data <- top5()
@@ -539,20 +541,21 @@ library(leaflet)
 
 ```{r}
 ui <- dashboardPage(
-  dashboardHeader(title = "Best Hospitals for Care"),
+  dashboardHeader(title = "Best Hospitals Around You"),
   dashboardSidebar(disable = TRUE),
   dashboardBody(
     fluidRow(
       box(
-        title = "Table Settings", width = 3,
-        selectInput("medical_condition", "Select Condition", choices = c("Arthritis", "Asthma", "Cancer", "Diabetes", "Hypertension", "Obesity"), 
-                    selected = "Cancer"),
-        selectInput("insurance_provider", "Select Insurance Provider", choices = c("Aetna", "Blue Cross", "Cigna", "Medicare", "UnitedHealthcare"),
-                    selected = "Medicare")
+        title = "Filter Options", width = 3, solidHeader = TRUE, status = "primary",
+        selectInput("medical_condition", "Medical Condition", choices = c("Arthritis", "Asthma", "Cancer", "Diabetes", "Hypertension", "Obesity"), 
+                    selected = "All"),
+        selectInput("insurance_provider", "Insurance Provider", choices = c( "Aetna", "Blue Cross", "Cigna", "Medicare", "UnitedHealthcare"),
+                    selected = "All")
       ),
       box(
         title = "Top 5 Hospitals",
-        width = 7,
+        width = 9,
+        status = "info",
         dataTableOutput("table")
       )
     ),
@@ -560,25 +563,31 @@ ui <- dashboardPage(
       box(
         title = "Matched Hospitals",
         width = 12,
+        solidHeader = TRUE, status = "warning",
         dataTableOutput("matched_hospitals_table")
-      ),
+      )
+    ),
+    fluidRow(
       box(
         title = "Map of Matched Hospitals",
         width = 12,
+        status = "success",
         leafletOutput("map_plot")
       )
     )
   )
 )
 
-# Define server logic
+# Server logic
 server <- function(input, output, session) {
-  
-  session$onSessionEnded(stopApp)
   
   # Define top5 as a reactive expression
   top5 <- reactive({
-    hospitals_final %>%
+    filtered_data <- hospitals_final %>%
+      filter(if (input$medical_condition != "All") medical_condition == input$medical_condition else TRUE,
+             if (input$insurance_provider != "All") insurance_provider == input$insurance_provider else TRUE)
+    
+    top_hospitals <- filtered_data %>%
       mutate(discharge_date = as.Date(discharge_date), 
              date_of_admission = as.Date(date_of_admission),
              time_spent = discharge_date - date_of_admission) %>%
@@ -587,34 +596,29 @@ server <- function(input, output, session) {
       mutate(length_of_stay = as.numeric(length_of_stay)) %>% 
       mutate(hospital_quality = log10(length_of_stay * billing_amount)) %>%
       arrange(hospital_quality) %>% 
-      filter(medical_condition == input$medical_condition) %>% 
       head(5) %>%
       select(hospital, hospital_quality, admission_type, medical_condition)
+    
+    top_hospitals
   })
   
+  # Render top 5 hospitals table
   output$table <- renderDataTable({
     data <- top5()
     data
   })
   
-  # Define the reactive function to find matches from the other dataset
+  # Define the reactive function to find matched hospitals
   matched_hospitals <- reactive({
-    x <- top5()  # Use the same filtering logic as top5 reactive
+    top_hospitals <- top5()
     
-    combined_results <- list()
+    combined_results <- lapply(top_hospitals$hospital, function(hosp) {
+      w <- strsplit(hosp, " ")[[1]][1]
+      w <- gsub("[^[:alnum:]]", " ", w)
+      hospitals_location[grep(w, tolower(hospitals_location$name), ignore.case = TRUE), c("name", "zip", "latitude", "longitude")]
+    })
     
-    # Loop through each hospital in the filtered dataset
-    for(i in 1:nrow(x)) {
-      row <- x[i,]
-      w <- strsplit(row$hospital, " ")[[1]][1]
-      w <- str_replace_all(w, "[^[:alnum:]]", " ")
-      # Append each subset to the list
-      combined_results[[i]] <- hospitals_location[grep(w, tolower(hospitals_location$name), ignore.case = TRUE), c("name", "zip", "latitude", "longitude")]
-    }
-    
-    # Combine all the subsets into a single dataframe
     result <- do.call(rbind, combined_results)
-    
     result
   })
   
@@ -640,6 +644,8 @@ server <- function(input, output, session) {
 # Run the application
 shinyApp(ui, server)
 ```
+
+
 
 
 
