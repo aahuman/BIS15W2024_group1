@@ -47,15 +47,14 @@ For the locations data set, we kept the most important information regarding the
 ```{r}
 knitr::include_graphics("covid_prices.png")
 ```
+  
+
 ## Slide 2
-
-
-```{r}
+```{r echo=FALSE, fig.align="center", out.width="50%"}
 knitr::include_graphics("insurance_providers.png")
 ```
-  
-## Slide 3
-```{r echo=FALSE, fig.align="center", out.width="40%"}
+
+```{r echo=FALSE, fig.align="center", out.width="50%"}
 knitr::include_graphics("000010.png")
 ```
 
