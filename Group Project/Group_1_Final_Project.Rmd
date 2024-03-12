@@ -339,8 +339,8 @@ result1 <- hospitals_final %>%
   rowwise() %>%
   mutate(
     w = strsplit(hospital, " ")[[1]][1],
-    w = str_replace_all(w, "[^[:alnum:]]", " "),
-    combined_results = list(hospitals_location[grep(w, tolower(hospitals_location$name), ignore.case = TRUE), c("name", "zip", "latitude", "longitude")])
+    w = str_replace_all(w, "[^[:alnum:]]", " "), # these lines of code allow to pull the first word in the top 5 hospitals to use them for matching
+    combined_results = list(hospitals_location[grep(w, tolower(hospitals_location$name), ignore.case = TRUE), c("name", "zip", "latitude", "longitude")]) #this line helps to combine the output from the previus one in the sinle table
   ) %>%
   pull(combined_results) %>%
   do.call(rbind, .)
@@ -381,7 +381,7 @@ ui <- dashboardPage(
         title = "Map of Matched Hospitals",
         width = 12,
         status = "success",
-        leafletOutput("map_plot")
+        leafletOutput("map_plot") #
       )
     )
   )
@@ -394,7 +394,7 @@ server <- function(input, output, session) {
   top5 <- reactive({
     filtered_data <- hospitals_final %>%
       filter(if (input$medical_condition != "All") medical_condition == input$medical_condition else TRUE,
-             if (input$insurance_provider != "All") insurance_provider == input$insurance_provider else TRUE)
+             if (input$insurance_provider != "All") insurance_provider == input$insurance_provider else TRUE) # here we creat two drop down menues for the user to choose from
     
     top_hospitals <- filtered_data %>%
       mutate(discharge_date = as.Date(discharge_date), 
@@ -431,21 +431,21 @@ server <- function(input, output, session) {
     result
   })
   
-  # Render the matched hospitals datatable
+  # Render the matched hospitals datatable 
   output$matched_hospitals_table <- renderDataTable({
-    matched_hospitals()
+    matched_hospitals() #produce table with matched hospitals
   })
   
   # Render the map of matched hospitals
   output$map_plot <- renderLeaflet({
-    result <- matched_hospitals()
+    result <- matched_hospitals() #we need to use this package to be able to add the map, because otherwise the app will not work if we use simple ggmap code 
     
     leaflet(result) %>%
       addTiles() %>%
       addMarkers(
         lng = ~longitude,
         lat = ~latitude,
-        popup = ~name
+        popup = ~name #adds names to points on map
       )
   })
 }
