@@ -39,15 +39,22 @@ For the main hospitals data set, we removed two variables, blood type and hospit
 
 For the locations data set, we kept the most important information regarding the locations of each hospital We also replaced some information listed as "NOT AVAILABLE" with NAs.  
 
-## Part 1: Some basic analysis
+## Part 1: Some basic analysis  
+
+
+## Slide 1
 
 ```{r}
 knitr::include_graphics("covid_prices.png")
 ```
+## Slide 2
+
+
 ```{r}
 knitr::include_graphics("insurance_providers.png")
 ```
-
+  
+## Slide 3
 ```{r echo=FALSE, fig.align="center", out.width="40%"}
 knitr::include_graphics("000010.png")
 ```
