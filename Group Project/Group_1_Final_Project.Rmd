@@ -1,0 +1,442 @@
+---
+title: "The Final Project/ Group 1"
+author: "Iliya Voytsyshyn, Clive Smith"
+date: "2024-04-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Load the Libraries  
+Load necessary libraries for data processing and visualization
+```{r include=FALSE}
+library(tidyverse)   # For data manipulation and visualization
+library(lubridate)   # For handling date variables
+library(janitor)     # For data cleaning
+library(shiny)       # For building interactive web applications
+library(shinydashboard)  # For creating dashboard layouts
+library(sf)          # For working with spatial data
+library(ggmap)       # For accessing Google Maps API
+library(leaflet)     # For interactive maps
+```
+
+Initialize Stadia Maps API token for accessing map tiles
+```{r}
+register_stadiamaps("d67f62a2-bd90-430c-a40a-9ad6e095b888", write = FALSE)
+```
+
+## Part 0
+
+Load and clean the main hospitals dataset
+```{r}
+hospitals <- read_csv("data/healthcare_dataset.csv")  # Load dataset
+hospitals <- clean_names(hospitals)  # Clean column names
+hospitals <- hospitals %>%
+  select(-blood_type, -room_number)  # Remove unnecessary columns
+```
+
+
+Further clean and prepare the hospitals dataset for analysis
+```{r}
+hospitals_final <- hospitals %>%
+  mutate(id = as.integer(factor(name))) %>%
+  select(-doctor, -name) %>%
+  arrange(id)  # Arrange by hospital ID for consistency
+```
+
+
+Load and clean the hospitals location dataset
+```{r}
+hospitals_location <- read_csv("data/hospital_locations.csv") %>%
+  clean_names() %>%
+  select(index, id, name, address, city, state, zip, type, status, latitude, longitude, website) %>%
+  mutate(website = na_if(website, "NOT AVAILABLE"))
+```
+
+
+## Part 1
+
+Extract necessary columns for Medicare cost analysis
+```{r}
+medicare_cost <- hospitals[, c("date_of_admission", "billing_amount")]
+```
+
+
+Split Medicare cost data into pre-COVID and post-COVID periods
+```{r}
+pre_covid <- subset(medicare_cost, date_of_admission < as.Date("2020-01-01"))
+post_covid <- subset(medicare_cost, date_of_admission >= as.Date("2020-01-01"))
+```
+
+
+Summarize billing amount statistics for pre-COVID and post-COVID periods
+```{r}
+summary(pre_covid$billing_amount)
+summary(post_covid$billing_amount)
+```
+
+
+Plot Medicare cost trends over time, comparing pre-COVID and post-COVID periods
+```{r}
+combined_data <- bind_rows(pre_covid %>% mutate(period = "Pre-COVID"),
+                           post_covid %>% mutate(period = "Post-COVID"))
+```
+
+
+Plot combined data with separate lines of regression for pre and post-COVID data
+```{r}
+combined_data %>%
+  ggplot(aes(x = date_of_admission, y = log10(billing_amount), color = period)) +
+  geom_point(size = 0.5) + 
+  geom_smooth(method = "lm", aes(group = period), se = TRUE) +
+  labs(title = "Medicare Costs Comparison",
+       x = "Date of Admission",
+       y = "Log10(Billing Amount)",
+       color = "Period") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = rel(1.75), hjust = 0.5))
+```
+
+
+Here we create a new column with price categories and visualize prices by hospitals and insurance companies and create a new column 'price_level' based on billing_amount ranges
+```{r}
+hospitals_final %>%
+  mutate(price_level = case_when(billing_amount < 13507 ~ "low", 
+                                 billing_amount >= 13507 & billing_amount <= 25258 ~ "normal", 
+                                 billing_amount > 25258 & billing_amount <= 37734 ~ "high", 
+                                 billing_amount > 37734 ~ "very high")) %>%
+  count(insurance_provider, price_level) %>%
+  ggplot(aes(x = insurance_provider, y = n, fill = price_level)) +
+  geom_col(position = "dodge")  # Visualize price categories by insurance providers
+```
+
+
+Visualize prices by medical conditions
+```{r}
+hospitals_final %>%
+  mutate(price_level = case_when(billing_amount < 13507 ~ "low", 
+                                 billing_amount >= 13507 & billing_amount <= 25258 ~ "normal", 
+                                 billing_amount > 25258 & billing_amount <= 37734 ~ "high", 
+                                 billing_amount > 37734 ~ "very high")) %>%
+  count(medical_condition, price_level) %>%
+  ggplot(aes(x = medical_condition, y = n, fill = price_level)) +
+  geom_col(position = "dodge")  # Visualize price categories by medical conditions
+```
+
+
+## Part 2
+
+
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay))
+```
+
+Can use this code to find top 5 hospitals for each condition with slight adjustment
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Cancer") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+```
+```{r}
+table(hospitals_final$medical_condition)
+```
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Arthritis") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+```
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Asthma") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+```
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Diabetes") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+
+```
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Hypertension") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+```
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>% 
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Obesity") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5)
+```
+
+Here is the app that allows to get the table based on the type of helthcare provider and type of assesment that summurzes all of the tables above.
+```{r echo=FALSE}
+
+ui <- dashboardPage(
+  dashboardHeader(title = "Best Hospitals for Care"),
+  dashboardSidebar(disable = TRUE),
+  dashboardBody(
+    fluidRow(
+      box(
+        title = "Table Settings", width = 3,
+        selectInput("medical_condition", "Select Condition", choices = c("Arthritis", "Asthma", "Cancer", "Diabetes", "Hypertension", "Obesity"), 
+                    selected = "Cancer"),
+        selectInput("insurance_provider", "Select Insurance Provider", choices = c("Aetna", "Blue Cross", "Cigna", "Medicare", "UnitedHealthcare"),
+                    selected = "Medicare")
+      ),
+      box(
+        title = "Top 5 Hospitals",
+        width = 7,
+        dataTableOutput("table")
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  
+  session$onSessionEnded(stopApp)
+  
+  # Define top5 as a reactive expression
+  top5 <- reactive({
+    hospitals_final %>%
+      mutate(discharge_date = as.Date(discharge_date), 
+             date_of_admission = as.Date(date_of_admission),
+             time_spent = discharge_date - date_of_admission) %>%
+      filter(!is.na(time_spent)) %>% 
+      separate(time_spent, into = "length_of_stay", sep = " ") %>% 
+      mutate(length_of_stay = as.numeric(length_of_stay)) %>% 
+      mutate(hospital_quality = log10(length_of_stay * billing_amount))
+  })
+  
+  output$table <- renderDataTable({
+    data <- top5()
+    
+    # Filter the data based on selected medical_condition
+    data <- data[data$medical_condition == input$medical_condition,]
+    
+    # Filter the data based on selected insurance provider
+    data <- data[data$insurance_provider == input$insurance_provider,]
+    
+    # Select top five hospitals based on hospital_quality
+    data <- data %>% 
+      arrange(hospital_quality) %>% 
+      head(5) %>%
+      select(hospital, hospital_quality, admission_type, medical_condition)
+    
+    # Return the filtered data for rendering in the DataTable
+    data
+  })
+}
+
+shinyApp(ui, server)
+
+```
+
+
+## Part 4
+
+This part of the project focuses on developing a system for matching hospitals from the first dataset, particularly the output from filtering it by healthcare provider and type of assessment, with the names of hospitals from the second dataset that contain information about their location. The datasets were not combined into one due to differences in naming conventions for hospitals and the high volume of information.
+
+### Part 4.1
+
+In this section, we wrote code to utilize the output from filtering the first dataset, where the first word from the hospital names is used to find matches in the second dataset. The code still has room for improvement, particularly in the accuracy of finding new hospitals, which can be enhanced to consider more than just the first word.
+```{r}
+result1 <- hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount)) %>%
+  arrange(hospital_quality) %>% 
+  filter(medical_condition=="Hypertension") %>% 
+  select(hospital, hospital_quality, admission_type, medical_condition) %>% 
+  head(5) %>%
+  rowwise() %>%
+  mutate(
+    w = strsplit(hospital, " ")[[1]][1],
+    w = str_replace_all(w, "[^[:alnum:]]", " "),
+    combined_results = list(hospitals_location[grep(w, tolower(hospitals_location$name), ignore.case = TRUE), c("name", "zip", "latitude", "longitude")])
+  ) %>%
+  pull(combined_results) %>%
+  do.call(rbind, .)
+result1
+```
+
+### Part 4.2
+
+Here, we create the app that searches for matches of filtered hospitals by their quality and maps their locations on the app.
+```{r echo=FALSE}
+ui <- dashboardPage(
+  dashboardHeader(title = "Best Hospitals Around You"),
+  dashboardSidebar(disable = TRUE),
+  dashboardBody(
+    fluidRow(
+      box(
+        title = "Filter Options", width = 3, solidHeader = TRUE, status = "primary",
+        selectInput("medical_condition", "Medical Condition", choices = c("Arthritis", "Asthma", "Cancer", "Diabetes", "Hypertension", "Obesity"), 
+                    selected = "All"),
+        selectInput("insurance_provider", "Insurance Provider", choices = c( "Aetna", "Blue Cross", "Cigna", "Medicare", "UnitedHealthcare"),
+                    selected = "All")
+      ),
+      box(
+        title = "Top 5 Hospitals",
+        width = 9,
+        status = "info",
+        dataTableOutput("table")
+      )
+    ),
+    fluidRow(
+      box(
+        title = "Matched Hospitals",
+        width = 12,
+        solidHeader = TRUE, status = "warning",
+        dataTableOutput("matched_hospitals_table")
+      )
+    ),
+    fluidRow(
+      box(
+        title = "Map of Matched Hospitals",
+        width = 12,
+        status = "success",
+        leafletOutput("map_plot")
+      )
+    )
+  )
+)
+
+# Server logic
+server <- function(input, output, session) {
+  
+  # Define top5 as a reactive expression
+  top5 <- reactive({
+    filtered_data <- hospitals_final %>%
+      filter(if (input$medical_condition != "All") medical_condition == input$medical_condition else TRUE,
+             if (input$insurance_provider != "All") insurance_provider == input$insurance_provider else TRUE)
+    
+    top_hospitals <- filtered_data %>%
+      mutate(discharge_date = as.Date(discharge_date), 
+             date_of_admission = as.Date(date_of_admission),
+             time_spent = discharge_date - date_of_admission) %>%
+      filter(!is.na(time_spent)) %>% 
+      separate(time_spent, into = "length_of_stay", sep = " ") %>% 
+      mutate(length_of_stay = as.numeric(length_of_stay)) %>% 
+      mutate(hospital_quality = log10(length_of_stay * billing_amount)) %>%
+      arrange(hospital_quality) %>% 
+      head(5) %>%
+      select(hospital, hospital_quality, admission_type, medical_condition)
+    
+    top_hospitals
+  })
+  
+  # Render top 5 hospitals table
+  output$table <- renderDataTable({
+    data <- top5()
+    data
+  })
+  
+  # Define the reactive function to find matched hospitals
+  matched_hospitals <- reactive({
+    top_hospitals <- top5()
+    
+    combined_results <- lapply(top_hospitals$hospital, function(hosp) {
+      w <- strsplit(hosp, " ")[[1]][1]
+      w <- gsub("[^[:alnum:]]", " ", w)
+      hospitals_location[grep(w, tolower(hospitals_location$name), ignore.case = TRUE), c("name", "zip", "latitude", "longitude")]
+    })
+    
+    result <- do.call(rbind, combined_results)
+    result
+  })
+  
+  # Render the matched hospitals datatable
+  output$matched_hospitals_table <- renderDataTable({
+    matched_hospitals()
+  })
+  
+  # Render the map of matched hospitals
+  output$map_plot <- renderLeaflet({
+    result <- matched_hospitals()
+    
+    leaflet(result) %>%
+      addTiles() %>%
+      addMarkers(
+        lng = ~longitude,
+        lat = ~latitude,
+        popup = ~name
+      )
+  })
+}
+
+# Run the application
+shinyApp(ui, server)
+```
+
+
+
+
+
+  
