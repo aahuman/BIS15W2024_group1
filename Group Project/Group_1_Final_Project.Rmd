@@ -90,13 +90,13 @@ Plot combined data with separate lines of regression for pre and post-COVID data
 ```{r}
 combined_data %>%
   ggplot(aes(x = date_of_admission, y = log10(billing_amount), color = period)) +
-  geom_point(size = 0.5) + 
-  geom_smooth(method = "lm", aes(group = period), se = TRUE) +
+  geom_point(size = 0.4, alpha=0.7) + 
+  geom_smooth(method = "lm", aes(group = period), se = TRUE, color="black") +
   labs(title = "Medicare Costs Comparison",
        x = "Date of Admission",
        y = "Log10(Billing Amount)",
        color = "Period") +
-  theme_minimal() +
+  theme_linedraw() +
   theme(plot.title = element_text(size = rel(1.75), hjust = 0.5))
 ```
 
@@ -110,7 +110,11 @@ hospitals_final %>%
                                  billing_amount > 37734 ~ "very high")) %>%
   count(insurance_provider, price_level) %>%
   ggplot(aes(x = insurance_provider, y = n, fill = price_level)) +
-  geom_col(position = "dodge")  # Visualize price categories by insurance providers
+  geom_col(position = "dodge", alpha=0.7, color="black")+  # Visualize price categories by insurance providers
+  theme_linedraw() +
+  theme(plot.title=element_text(size = rel(1.75), hjus=0.5))+
+  labs(title="Insurance Providers by Price Category", 
+       x="Insurance Provider", y="Number of Hospitals")
 ```
 
 
@@ -123,13 +127,17 @@ hospitals_final %>%
                                  billing_amount > 37734 ~ "very high")) %>%
   count(medical_condition, price_level) %>%
   ggplot(aes(x = medical_condition, y = n, fill = price_level)) +
-  geom_col(position = "dodge")  # Visualize price categories by medical conditions
+  geom_col(position = "dodge", alpha=0.7, color="black")+ # Visualize price categories by medical conditions
+  theme_linedraw()+
+  theme(plot.title=element_text(size = rel(1.75), hjus=0.5))+
+  labs(title="Medical Conditions by Price Category", 
+       x="Medical Condition", y="Number of Hospitals")
 ```
 
-
 ## Part 2
+Setting up for the app
 
-
+First, we took the admit and discharge date and used them to create a variable that showed the length of each hospital stay in days. We did this using the 'lubridate' package. 
 ```{r}
 hospitals_final %>%
   mutate(discharge_date = as.Date(discharge_date), 
@@ -140,7 +148,21 @@ hospitals_final %>%
   mutate(length_of_stay=as.numeric(length_of_stay))
 ```
 
-Can use this code to find top 5 hospitals for each condition with slight adjustment
+Afterwards, we made a new variable measuring the quality of each hospital by multiplying the length of stay with billing amount. We decided that hospitals with a lower length of stay and billing amount were considered higher quality, so the lower the numerical value for hospital quality, the better the hospital. 
+We realize that this isn't necessarily the best metric for evaluating the quality of different hospitals, but we decided that this was the best way to do it, given the data we had.
+```{r}
+hospitals_final %>%
+  mutate(discharge_date = as.Date(discharge_date), 
+         date_of_admission = as.Date(date_of_admission),
+         time_spent = discharge_date - date_of_admission) %>%
+  filter(!is.na(time_spent)) %>% 
+  separate(time_spent, into="length_of_stay", sep = " ") %>% 
+  mutate(length_of_stay=as.numeric(length_of_stay)) %>% 
+  mutate(hospital_quality=log10(length_of_stay*billing_amount))
+```
+
+This shows the top 5 hospitals for each condition by price category. 
+
 ```{r}
 hospitals_final %>%
   mutate(discharge_date = as.Date(discharge_date), 
@@ -155,9 +177,7 @@ hospitals_final %>%
   select(hospital, hospital_quality, admission_type, medical_condition) %>% 
   head(5)
 ```
-```{r}
-table(hospitals_final$medical_condition)
-```
+
 ```{r}
 hospitals_final %>%
   mutate(discharge_date = as.Date(discharge_date), 
@@ -229,8 +249,10 @@ hospitals_final %>%
   select(hospital, hospital_quality, admission_type, medical_condition) %>% 
   head(5)
 ```
+#Part 3
 
-Here is the app that allows to get the table based on the type of helthcare provider and type of assesment that summurzes all of the tables above.
+In this section, we made an app that incorporates all of the data tables shown above. It also allows you to filter by the different insurance providers in the data. 
+
 ```{r echo=FALSE}
 
 ui <- dashboardPage(
@@ -273,19 +295,19 @@ server <- function(input, output, session) {
   output$table <- renderDataTable({
     data <- top5()
     
-    # Filter the data based on selected medical_condition
+    # Filter the data based on selected medical condition
     data <- data[data$medical_condition == input$medical_condition,]
     
     # Filter the data based on selected insurance provider
     data <- data[data$insurance_provider == input$insurance_provider,]
     
-    # Select top five hospitals based on hospital_quality
+    # Select top five hospitals based on hospital quality
     data <- data %>% 
       arrange(hospital_quality) %>% 
       head(5) %>%
       select(hospital, hospital_quality, admission_type, medical_condition)
     
-    # Return the filtered data for rendering in the DataTable
+    # Return the filtered data for rendering in the data table
     data
   })
 }
@@ -297,11 +319,10 @@ shinyApp(ui, server)
 
 ## Part 4
 
-This part of the project focuses on developing a system for matching hospitals from the first dataset, particularly the output from filtering it by healthcare provider and type of assessment, with the names of hospitals from the second dataset that contain information about their location. The datasets were not combined into one due to differences in naming conventions for hospitals and the high volume of information.
+This is the final part of the project, where we matched the hospitals shown from the app above to a different data set containing the zip codes and coordinates of hospitals around the country. The app that I (Iliya) created takes the closest matches in the hospital locations data set and puts them onto a map of the US. The biggest challenge in this part was matching the names of the hospitals in the two data sets to each other. The solution that I (Iliya) created wasn't perfect, as the names from the data sets don't match up exactly, but with better data, this could be fixed.
 
-### Part 4.1
 
-In this section, we wrote code to utilize the output from filtering the first dataset, where the first word from the hospital names is used to find matches in the second dataset. The code still has room for improvement, particularly in the accuracy of finding new hospitals, which can be enhanced to consider more than just the first word.
+The code still has room for improvement, particularly in the accuracy of finding new hospitals, which can be enhanced to consider more than just the first word.
 ```{r}
 result1 <- hospitals_final %>%
   mutate(discharge_date = as.Date(discharge_date), 
@@ -326,9 +347,7 @@ result1 <- hospitals_final %>%
 result1
 ```
 
-### Part 4.2
 
-Here, we create the app that searches for matches of filtered hospitals by their quality and maps their locations on the app.
 ```{r echo=FALSE}
 ui <- dashboardPage(
   dashboardHeader(title = "Best Hospitals Around You"),
