@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+#Project overview
+###Our main goal in this project was to use a dataset with financial information about different hospitals to find where prices were different. We also wanted to find the best hospitals for care depending on both insurance provider and medical condition. 
 
 ## Load the Libraries  
 Load necessary libraries for data processing and visualization
@@ -30,14 +32,13 @@ register_stadiamaps("d67f62a2-bd90-430c-a40a-9ad6e095b888", write = FALSE)
 
 ## Part 0
 
-Load and clean the main hospitals dataset
+Load and clean the main hospitals dataset.
 ```{r}
 hospitals <- read_csv("data/healthcare_dataset.csv")  # Load dataset
 hospitals <- clean_names(hospitals)  # Clean column names
 hospitals <- hospitals %>%
   select(-blood_type, -room_number)  # Remove unnecessary columns
 ```
-
 
 Further clean and prepare the hospitals dataset for analysis
 ```{r}
@@ -47,6 +48,7 @@ hospitals_final <- hospitals %>%
   arrange(id)  # Arrange by hospital ID for consistency
 ```
 
+###This dataset includes hospital names, 6 common medical conditions in the US, and 5 common insurance providers. It also included the names of each patient admitted, which we have changed into numerical IDs for privacy purposes.
 
 Load and clean the hospitals location dataset
 ```{r}
