@@ -23,41 +23,79 @@ hospitals_location <- read_csv("data/hospital_locations.csv") %>%
 
 ui <- dashboardPage(
   dashboardHeader(title = "Best Hospitals Around You"),
-  dashboardSidebar(disable = TRUE),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Filter Options", tabName = "filter"),
+      menuItem("About", tabName = "about")
+    )
+  ),
   dashboardBody(
-    fluidRow(
-      box(
-        title = "Filter Options", width = 3, solidHeader = TRUE, status = "primary",
-        selectInput("medical_condition", "Medical Condition", choices = c("Arthritis", "Asthma", "Cancer", "Diabetes", "Hypertension", "Obesity"), 
-                    selected = "All"),
-        selectInput("insurance_provider", "Insurance Provider", choices = c( "Aetna", "Blue Cross", "Cigna", "Medicare", "UnitedHealthcare"),
-                    selected = "All")
+    tags$head(
+      tags$style(HTML("
+        .header-title {
+          color: blue;
+          font-size: 24px;
+        }
+        .custom-image {
+          margin-top: 20px;
+        }
+      "))
+    ),
+    tabItems(
+      tabItem(
+        tabName = "filter",
+        fluidRow(
+          box(
+            title = "Filter Options", width = 3, solidHeader = TRUE, status = "primary",
+            selectInput("medical_condition", "Medical Condition", choices = c("Arthritis", "Asthma", "Cancer", "Diabetes", "Hypertension", "Obesity"), 
+                        selected = "All"),
+            selectInput("insurance_provider", "Insurance Provider", choices = c( "Aetna", "Blue Cross", "Cigna", "Medicare", "UnitedHealthcare"),
+                        selected = "All")
+          ),
+          box(
+            title = "Top 5 Hospitals",
+            width = 9,
+            status = "info",
+            dataTableOutput("table")
+          )
+        ),
+        fluidRow(
+          box(
+            title = "Matched Hospitals",
+            width = 12,
+            solidHeader = TRUE, status = "warning",
+            dataTableOutput("matched_hospitals_table")
+          )
+        ),
+        fluidRow(
+          box(
+            title = "Map of Matched Hospitals",
+            width = 12,
+            status = "success",
+            leafletOutput("map_plot")
+          )
+        )
       ),
-      box(
-        title = "Top 5 Hospitals",
-        width = 9,
-        status = "info",
-        dataTableOutput("table")
-      )
-    ),
-    fluidRow(
-      box(
-        title = "Matched Hospitals",
-        width = 12,
-        solidHeader = TRUE, status = "warning",
-        dataTableOutput("matched_hospitals_table")
-      )
-    ),
-    fluidRow(
-      box(
-        title = "Map of Matched Hospitals",
-        width = 12,
-        status = "success",
-        leafletOutput("map_plot") #
+      tabItem(
+        tabName = "about",
+        h2("Idea Behind It"),
+        p("This project aims to provide information about the best hospitals around you based on various medical conditions and insurance providers. The quality of hospitals was calculated using data on the length of stay for each condition and billing amounts. Future improvements to the app could involve sourcing larger datasets with more cases and enhancing the matching system between datasets."),
+        h2("Creators"),
+        p("This project was created by Cive Smith and Iliya Voytsyshyn."),
+        h2("Future Enhancements"),
+        tags$ul(
+          tags$li("Integration of user reviews and ratings for hospitals."),
+          tags$li("Incorporation of additional criteria for hospital quality assessment."),
+          tags$li("Enhanced visualization features, such as interactive charts or graphs."),
+          tags$li("Integration of real-time data for up-to-date information on hospital availability and services.")
+        ),
+        h2("Acknowledgments"),
+        p("We would like to thank all contributors and data providers who made this project possible.")
       )
     )
   )
 )
+
 
 # Server logic
 server <- function(input, output, session) {
@@ -66,7 +104,7 @@ server <- function(input, output, session) {
   top5 <- reactive({
     filtered_data <- hospitals_final %>%
       filter(if (input$medical_condition != "All") medical_condition == input$medical_condition else TRUE,
-             if (input$insurance_provider != "All") insurance_provider == input$insurance_provider else TRUE) # here we creat two drop down menues for the user to choose from
+             if (input$insurance_provider != "All") insurance_provider == input$insurance_provider else TRUE)
     
     top_hospitals <- filtered_data %>%
       mutate(discharge_date = as.Date(discharge_date), 
@@ -105,19 +143,19 @@ server <- function(input, output, session) {
   
   # Render the matched hospitals datatable 
   output$matched_hospitals_table <- renderDataTable({
-    matched_hospitals() #produce table with matched hospitals
+    matched_hospitals()
   })
   
   # Render the map of matched hospitals
   output$map_plot <- renderLeaflet({
-    result <- matched_hospitals() #we need to use this package to be able to add the map, because otherwise the app will not work if we use simple ggmap code 
+    result <- matched_hospitals()
     
     leaflet(result) %>%
       addTiles() %>%
       addMarkers(
         lng = ~longitude,
         lat = ~latitude,
-        popup = ~name #adds names to points on map
+        popup = ~name
       )
   })
 }
